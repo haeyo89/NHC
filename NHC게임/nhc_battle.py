@@ -4323,7 +4323,7 @@ class NHCBattle(GachaMixin, LibraryMixin, WorkshopMixin, AdminMixin, AdminAspect
                 self.render()
         if self.lobby and not (self.gacha_open or self.codex_open or self.modal):
             self._lobby_acc = self.__dict__.get("_lobby_acc", 0.0) + dt
-            if self._lobby_acc >= 0.05:
+            if self._lobby_acc >= 0.08:
                 self._lobby_acc = 0.0
                 self.render()
 
@@ -4356,7 +4356,20 @@ class NHCBattle(GachaMixin, LibraryMixin, WorkshopMixin, AdminMixin, AdminAspect
             self.canvas.create_rectangle(x + 1, y + 1, x + 1 + (w - 2) * ratio, y + h - 1,
                                          fill=color, outline="", tags="ui")
 
+    _render_pending = False
+
     def render(self):
+        """다시 그리기 요청. 같은 틱에 여러 번 불려도 한 번만 그린다 (마우스 이동·흔들림·연출 겹침 방지)."""
+        if self._render_pending:
+            return
+        self._render_pending = True
+        self.root.after_idle(self._render_flush)
+
+    def _render_flush(self):
+        self._render_pending = False
+        self._render_now()
+
+    def _render_now(self):
         theme = theme_of(self.phase)
         try:
             self.canvas.configure(bg=theme["bg"])
