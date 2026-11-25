@@ -65,6 +65,24 @@ class LibraryMixin:
                                    and u.imperial_guardian_round == self.round),
             "princess": lambda u: self.is_imperial_n(u) and u.imperial_princess,
         }
+        checks.update({
+            "w_foresight": lambda u: self.is_underboss(u) and u.ub_overheat < 0,
+            "w_ammo": lambda u: self.is_underboss(u) and u.ub_ammo > 0,
+            "w_overheat": lambda u: self.is_underboss(u) and u.ub_overheat >= 0,
+            "w_masterpiece": lambda u: u.ma_masterpiece,
+            "w_melody": lambda u: u.ma_melody,
+            "w_view": lambda u: self.is_maestro(u),
+            "w_material": lambda u: self.is_maestro(u),
+            "w_leva": lambda u: self.is_bigsis(u) and u.bs_leva,
+            "w_counter": lambda u: u.status == "counter",
+            "w_wrap": lambda u: self.is_bigsis(u) and u.bs_wrap > 0,
+            "w_fun": lambda u: self.is_bigsis(u) and not u.bs_leva and u.bs_fun > 0,
+            "w_rib": lambda u: u.rib_turns > 0,
+            "w_burn": lambda u: u.burn > 0,
+            "w_unlock": lambda u: self.is_oracle(u),
+            "w_hermes": lambda u: self.is_oracle(u) and u.or_hermes > 0,
+            "w_grace": lambda u: self.is_oracle(u) and u.or_grace > 0,
+        })
         fn = checks.get(eid)
         if not fn:
             return []
@@ -99,7 +117,7 @@ class LibraryMixin:
             ty += lh
 
     def codex_back(self):
-        self.codex_page = "menu"
+        self.codex_page = "menu_web" if self.codex_page.endswith("_web") else "menu"
         self.codex_sel = None
         self.render()
 
@@ -109,10 +127,15 @@ class LibraryMixin:
         elif self.codex_page == "char":
             self.codex_page = "char_select"
             self.render()
-        elif self.codex_page != "menu":
+        elif self.codex_page not in ("menu", "menu_web"):
             self.codex_back()
         else:
             self.close_codex()
+
+    def codex_flip(self, page):
+        self.codex_page = page
+        self.codex_sel = None
+        self.render()
 
     def codex_goto(self, page):
         self.codex_page = page
@@ -124,20 +147,22 @@ class LibraryMixin:
     def render_codex(self):
         if not self.codex_open:
             return
-        if self.codex_page == "effect":
-            self.render_effect_codex()
-        elif self.codex_page == "aspect":
-            self.render_aspect_codex()
+        if self.codex_page in ("effect", "effect_web"):
+            self.render_effect_codex(self.codex_page == "effect_web")
+        elif self.codex_page in ("aspect", "aspect_web"):
+            self.render_aspect_codex(self.codex_page == "aspect_web")
         elif self.codex_page == "char_select":
             self.render_char_select()
         elif self.codex_page == "char":
             self.render_char_page()
         elif self.codex_page == "workshop":
             self.render_workshop()
+        elif self.codex_page == "menu_web":
+            self.render_library_menu(True)
         else:
             self.render_library_menu()
 
-    def render_library_menu(self):
+    def render_library_menu(self, web=False):
         self.buttons = []
         self.canvas.create_rectangle(0, 0, WIN_W, WIN_H, fill="#000000", outline="",
                                      stipple="gray75", tags="ui")
@@ -145,22 +170,45 @@ class LibraryMixin:
         px, py = (WIN_W - pw) / 2, 250
         self.canvas.create_rectangle(px + 5, py + 5, px + pw + 5, py + ph + 5,
                                      fill="#05070A", outline="", stipple="gray50", tags="ui")
-        self.canvas.create_rectangle(px, py, px + pw, py + ph, fill=PANEL, outline=SPC,
+        mcol = WEB_COLOR if web else SPC
+        self.canvas.create_rectangle(px, py, px + pw, py + ph, fill=PANEL, outline=mcol,
                                      width=2, tags="ui")
-        self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=SPC, outline="", tags="ui")
+        self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=mcol, outline="", tags="ui")
         self.txt(px + 24, py + 16, "서재", 30, TXT, bold=True)
-        self.txt(px + 24, py + 62, "열람할 도감을 고르세요", 12, MUT, mono=True)
-        self.txt(px + pw - 24, py + 24, "[F] / [ESC] 닫기", 11, MUT, mono=True, anchor="ne")
+        if web:
+            self.txt(px + 108, py + 26, "{거미집} 테마", 16, WEB_COLOR, bold=True)
+        self.txt(px + 24, py + 62, "열람할 도감을 고르세요  (2 / 2)" if web else "열람할 도감을 고르세요  (1 / 2)",
+                 12, MUT, mono=True)
+        self.txt(px + pw - 24, py + 24, "[F] / [ESC] 닫기  ·  [← →] 테마", 11, MUT, mono=True, anchor="ne")
+        for ax, label, ok, target, idx in ((px - 50, "◀", web, "menu", 20),
+                                           (px + pw + 10, "▶", not web, "menu_web", 21)):
+            ahov = ok and self.hover == ("lib", idx)
+            ay = py + ph / 2 - 40
+            self.canvas.create_rectangle(ax, ay, ax + 40, ay + 80, fill=PANEL2 if ahov else PANEL,
+                                         outline=WEB_COLOR if ok else BRD, width=2 if ahov else 1, tags="ui")
+            self.txt(ax + 20, ay + 40, label, 20, WEB_COLOR if ok else BRD, bold=True, anchor="center")
+            self.buttons.append(dict(x=ax, y=ay, w=40, h=80, key=("lib", idx),
+                                     cb=(lambda t=target: self.codex_flip(t)) if ok else (lambda: None)))
         self.canvas.create_line(px + 24, py + 84, px + pw - 24, py + 84, fill=BRD, tags="ui")
 
-        bw, bh, gap = (pw - 48 - 32) / 3, 190, 16
+        n_entries = 2 if web else 3
+        bw, bh, gap = (pw - 48 - 16 * (n_entries - 1)) / n_entries, 190, 16
         by = py + 104
         entries = [
             ("전투효과 도감", "버프 · 디버프 · 형상 고유 효과 %d종" % len(EFFECTS), BRKC, "effect"),
-            ("형상 도감", "보유 %d/%d · 클릭해 장착" % (len(self.owned_aspects), len(ASPECTS)),
+            ("형상 도감", "보유 %d/%d · 클릭해 장착" % (
+                sum(1 for a in ASPECTS if a["id"] in self.owned_aspects), len(ASPECTS)),
              SHLD, "aspect"),
             ("등장인물 도감", "N · H · C  컨셉 아트와 설명", ROSE, "char_select"),
         ]
+        if web:
+            entries = [
+                ("거미집 전투효과 도감", "{거미집} 전용 버프 · 디버프 · 수치 %d종" % len(WEB_EFFECTS),
+                 WEB_COLOR, "effect_web"),
+                ("거미집 형상 도감", "보유 %d/%d · 클릭해 장착" % (
+                    sum(1 for a in SPIDER_ASPECTS if a["id"] in self.owned_aspects), len(SPIDER_ASPECTS)),
+                 WEB_COLOR, "aspect_web"),
+            ]
         for i, (name, sub, color, page) in enumerate(entries):
             bx = px + 24 + i * (bw + gap)
             hov = self.hover == ("lib", i)
@@ -174,7 +222,9 @@ class LibraryMixin:
             self.buttons.append(dict(x=bx, y=by, w=bw, h=bh, key=("lib", i),
                                      cb=(lambda p=page: self.codex_goto(p))))
 
-    def render_aspect_codex(self):
+    def render_aspect_codex(self, web=False):
+        lst = SPIDER_ASPECTS if web else ASPECTS
+        pcol = WEB_COLOR if web else SHLD
         self.buttons = []
         self.canvas.create_rectangle(0, 0, WIN_W, WIN_H, fill="#000000", outline="",
                                      stipple="gray75", tags="ui")
@@ -182,13 +232,13 @@ class LibraryMixin:
         px, py = (WIN_W - pw) / 2, 130
         self.canvas.create_rectangle(px + 5, py + 5, px + pw + 5, py + ph + 5,
                                      fill="#05070A", outline="", stipple="gray50", tags="ui")
-        self.canvas.create_rectangle(px, py, px + pw, py + ph, fill=PANEL, outline=SHLD,
+        self.canvas.create_rectangle(px, py, px + pw, py + ph, fill=PANEL, outline=pcol,
                                      width=2, tags="ui")
-        self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=SHLD, outline="", tags="ui")
+        self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=pcol, outline="", tags="ui")
         ix, iw = px + 24, pw - 48
 
-        self.txt(ix, py + 14, "형상 도감", 28, TXT, bold=True)
-        self.txt(ix + 170, py + 28, "보유 형상을 클릭해 장착 · 마우스를 올리면 스킬 확인", 12, MUT,
+        self.txt(ix, py + 14, "거미집 형상 도감" if web else "형상 도감", 28, TXT, bold=True)
+        self.txt(ix + (260 if web else 170), py + 28, "보유 형상을 클릭해 장착 · 마우스를 올리면 스킬 확인", 12, MUT,
                  mono=True)
         self.txt(px + pw - 24, py + 24, "[F] 닫기 · [ESC] 서재로", 11, MUT, mono=True, anchor="ne")
         self.canvas.create_line(ix, py + 60, ix + iw, py + 60, fill=BRD, tags="ui")
@@ -196,7 +246,7 @@ class LibraryMixin:
         per_row, gap, ch = 5, 8, 64
         cw = (iw - (per_row - 1) * gap) / per_row
         y0 = py + 72
-        for i, a in enumerate(ASPECTS):
+        for i, a in enumerate(lst):
             dx = ix + (i % per_row) * (cw + gap)
             dy = y0 + (i // per_row) * (ch + gap)
             owned = a["id"] in self.owned_aspects
@@ -219,12 +269,12 @@ class LibraryMixin:
             cb = (lambda aid=a["id"]: self.equip_aspect(aid)) if owned else (lambda: None)
             self.buttons.append(dict(x=dx, y=dy, w=cw, h=ch, key=("adx", i), cb=cb))
 
-        rows = (len(ASPECTS) + per_row - 1) // per_row
+        rows = (len(lst) + per_row - 1) // per_row
         sy = y0 + rows * (ch + gap) + 6
         parts = []
         for cid in ("N", "H", "C"):
             unit = self.roster.get(cid)
-            asp = next((x for x in ASPECTS if unit and x["id"] == unit.aspect_id), None)
+            asp = self.find_aspect(unit.aspect_id) if unit else None
             parts.append("%s: %s" % (cid, asp["title"] if asp else "-"))
         self.txt(ix, sy, "장착 중 — " + "  ·  ".join(parts), 12, TXT, mono=True)
         if self.gacha_notice:
@@ -239,8 +289,8 @@ class LibraryMixin:
                                  cb=self.codex_back))
 
         h = self.hover
-        if isinstance(h, tuple) and h[0] == "adx" and 0 <= h[1] < len(ASPECTS):
-            self.draw_aspect_tip(ASPECTS[h[1]])
+        if isinstance(h, tuple) and h[0] == "adx" and 0 <= h[1] < len(lst):
+            self.draw_aspect_tip(lst[h[1]])
 
     def codex_open_char(self, cid):
         self.codex_char = cid
@@ -709,9 +759,11 @@ class LibraryMixin:
         self.txt(px + pw - 24, py + ph - 30, "[F] 닫기 · [ESC] 목록으로", 11, MUT, mono=True,
                  anchor="e")
 
-    def render_effect_codex(self):
+    def render_effect_codex(self, web=False):
         if not self.codex_open:
             return
+        effects, cats = (WEB_EFFECTS, WEB_EFFECT_CATS) if web else (EFFECTS, EFFECT_CATS)
+        ecol = WEB_COLOR if web else BRKC
         self.buttons = []     # 뒤쪽 버튼이 눌리지 않도록 교체
         self.canvas.create_rectangle(0, 0, WIN_W, WIN_H, fill="#000000", outline="",
                                      stipple="gray75", tags="ui")
@@ -719,21 +771,21 @@ class LibraryMixin:
         px, py = (WIN_W - pw) / 2, 60
         self.canvas.create_rectangle(px + 5, py + 5, px + pw + 5, py + ph + 5,
                                      fill="#05070A", outline="", stipple="gray50", tags="ui")
-        self.canvas.create_rectangle(px, py, px + pw, py + ph, fill=PANEL, outline=BRKC,
+        self.canvas.create_rectangle(px, py, px + pw, py + ph, fill=PANEL, outline=ecol,
                                      width=2, tags="ui")
-        self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=BRKC, outline="", tags="ui")
+        self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=ecol, outline="", tags="ui")
         ix, iw = px + 24, pw - 48
 
-        self.txt(ix, py + 14, "전투효과 도감", 28, TXT, bold=True)
-        self.txt(ix + 214, py + 28, "마우스를 올리면 설명 · 클릭하면 아래에 고정", 12, MUT, mono=True)
+        self.txt(ix, py + 14, "거미집 전투효과 도감" if web else "전투효과 도감", 28, TXT, bold=True)
+        self.txt(ix + (304 if web else 214), py + 28, "마우스를 올리면 설명 · 클릭하면 아래에 고정", 12, MUT, mono=True)
         self.txt(px + pw - 24, py + 24, "[F] 닫기 · [ESC] 서재로", 11, MUT, mono=True, anchor="ne")
         self.canvas.create_line(ix, py + 60, ix + iw, py + 60, fill=BRD, tags="ui")
 
         per_row, gap, chip_h = 5, 8, 46
         cw = (iw - (per_row - 1) * gap) / per_row
         y = py + 72
-        for cat_id, cat_label, cat_color in EFFECT_CATS:
-            items = [(i, e) for i, e in enumerate(EFFECTS) if e["cat"] == cat_id]
+        for cat_id, cat_label, cat_color in cats:
+            items = [(i, e) for i, e in enumerate(effects) if e["cat"] == cat_id]
             self.txt(ix, y, "%s  (%d)" % (cat_label, len(items)), 13, cat_color, bold=True)
             y += 24
             for n, (idx, e) in enumerate(items):
@@ -768,8 +820,8 @@ class LibraryMixin:
         dy = py + ph - 138
         dh = 86
         self.canvas.create_rectangle(ix, dy, ix + iw, dy + dh, fill=PANEL2, outline=BRD, tags="ui")
-        if self.codex_sel is not None and self.codex_sel < len(EFFECTS):
-            e = EFFECTS[self.codex_sel]
+        if self.codex_sel is not None and self.codex_sel < len(effects):
+            e = effects[self.codex_sel]
             self.txt(ix + 14, dy + 8, e["name"], 16, e["color"], bold=True)
             self.txt(ix + iw - 14, dy + 12, e["scope"], 11, MUT, mono=True, anchor="ne")
             self.wtxt(ix + 14, dy + 32, iw - 28, e["desc"].replace(" / ", "\n"), 11, TXT, mono=True)
@@ -786,8 +838,8 @@ class LibraryMixin:
                                  cb=self.codex_back))
 
         h = self.hover
-        if isinstance(h, tuple) and h[0] == "cdx" and 0 <= h[1] < len(EFFECTS):
-            self.draw_effect_tip(EFFECTS[h[1]])
+        if isinstance(h, tuple) and h[0] == "cdx" and 0 <= h[1] < len(effects):
+            self.draw_effect_tip(effects[h[1]])
 
     def lobby_library(self):
         self.codex_open = True

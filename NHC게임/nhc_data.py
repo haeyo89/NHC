@@ -357,7 +357,7 @@ for _star, _total in ((1, 69.3), (2, 29.7), (3, 1.0)):
         _a["w"] = _total / len(_grp)
 GACHA_POOL = ASPECTS
 
-# ---- ★★★★ 언더보스/C — 어드민 전용 (ASPECTS 에 넣지 않는다: 가챠·도감에 노출 금지) ----
+# ---- ★★★ 언더보스/C — 특별해석 {거미집} 전용 (ASPECTS 에 넣지 않는다: 일반 해석·일반 도감에는 나오지 않는다) ----
 UNDERBOSS_C_SKILLS = [
     dict(name="콜피 탈리오", cost=2, kind="ub_colpi", target="enemy", dmg=25, ammo=1, extra_brk=10,
          fx="bullet", desc="25 피해 · 가속탄 1 소비시 10 추가 격파 고정피해"),
@@ -377,10 +377,10 @@ UB_SKILL_DISPOSAL = dict(
     name="처분", cost=0, kind="ub_disposal", target="enemy", dmg=70, ammo=3, extra_brk=35,
     fx="frenzy", line="'지긋 지긋해! 너네도 그새끼도 전부 다!!'",
     desc="가속탄 10 획득 · 70 피해(체력 50% 이하면 2배) · 가속탄 3 소비시 35 추가 격파 고정피해")
-UNDERBOSS_ASPECT = dict(id="c_underboss", char="C", title="언더보스/C", star=4,
-                        desc="어드민 전용 형상", skills=UNDERBOSS_C_SKILLS, hidden=True)
+UNDERBOSS_ASPECT = dict(id="c_underboss", char="C", title="언더보스/C", star=3,
+                        desc="특별해석 {거미집} 전용 형상", skills=UNDERBOSS_C_SKILLS, theme="web")
 
-# ---- ★★★★ 마에스트로/H — 어드민 전용 ----
+# ---- ★★★ 마에스트로/H — 특별해석 {거미집} 전용 ----
 MA_BONE = "#E6DFD0"          # 뼈의 색 (이펙트/배지)
 MA_BLOOD = "#9C1B26"         # 뼈 칼의 핏빛
 MA_GOLD = "#FFC83D"          # 큼직한 피해 숫자
@@ -403,10 +403,10 @@ MA_SKILL_CLOSING = dict(
     name="폐장", cost=0, kind="ma_closing", target="all_enemies", dmg=120,
     line="'폐장시간이 되었답니다. 그럼, 안녕히!'",
     desc="모든 적에게 120 고정피해(수비 무시) · 모든 적에게 간이늑골 3 · 아군에게 선율")
-MAESTRO_ASPECT = dict(id="h_maestro", char="H", title="마에스트로/H", star=4,
-                      desc="어드민 전용 형상", skills=MAESTRO_H_SKILLS, hidden=True)
+MAESTRO_ASPECT = dict(id="h_maestro", char="H", title="마에스트로/H", star=3,
+                      desc="특별해석 {거미집} 전용 형상", skills=MAESTRO_H_SKILLS, theme="web")
 
-# ---- ★★★★ 큰누님/N — 어드민 전용 ----
+# ---- ★★★ 큰누님/N — 특별해석 {거미집} 전용 ----
 BS_FIRE = "#FF7A2E"          # 불꽃/화상 색
 BS_WRAP_START = 3            # 전투 시작시 포장
 BS_FUN_START = 2             # 전투 시작시 달아오르는 재미
@@ -438,10 +438,10 @@ BIGSIS_LEVA_SKILLS = [
          speed_down=3, stun=True,
          desc="[레바테인] 100 피해 / 20 고정 격파피해 / 다음턴 속도 감소 3 · 기절 부여"),
 ]
-BIGSIS_ASPECT = dict(id="n_bigsis", char="N", title="큰누님/N", star=4,
-                     desc="어드민 전용 형상", skills=BIGSIS_N_SKILLS, hidden=True)
+BIGSIS_ASPECT = dict(id="n_bigsis", char="N", title="큰누님/N", star=3,
+                     desc="특별해석 {거미집} 전용 형상", skills=BIGSIS_N_SKILLS, theme="web")
 
-# ---- ★★★★ 신탁 대행자/H — 어드민 전용 ----
+# ---- ★★★ 신탁 대행자/H — 특별해석 {거미집} 전용 ----
 OR_GOLD = "#FFD56B"
 OR_GOLD_L = "#FFF6D6"
 OR_SKY = "#8FD8FF"
@@ -476,8 +476,8 @@ OR_SKILL_FURIOSO = dict(
     name="Furioso-Replica", cost=0, kind="or_furioso", target="enemy", dmg=35,
     desc="SP 소모/회복 없음 · 방어행동 무시 · 총 9회 적중 (적중마다 35 피해 + 신탁 단말기) / "
          "모든 적을 무작위 공격 · 첫 타격과 마지막 타격은 지정 대상 · 9번째는 (낫) 고정")
-ORACLE_ASPECT = dict(id="h_oracle", char="H", title="신탁 대행자/H", star=4,
-                     desc="어드민 전용 형상", skills=ORACLE_H_SKILLS, hidden=True)
+ORACLE_ASPECT = dict(id="h_oracle", char="H", title="신탁 대행자/H", star=3,
+                     desc="특별해석 {거미집} 전용 형상", skills=ORACLE_H_SKILLS, theme="web")
 
 # ---- 환상(幻想) — 궁극기 ----
 ROSE_D = "#A3124A"           # 로즈 오브 샤론 — 짙은 장미
@@ -842,3 +842,96 @@ for _star, _total in ((1, 69.3), (2, 29.7), (3, 1.0)):
         _a["w"] = _total / len(_grp)
 if "GACHA_POOL" in globals() and GACHA_POOL is not ASPECTS:
     GACHA_POOL[:] = ASPECTS
+
+
+# =============================================================================
+# 특별해석 {거미집}  (픽업 해석 테마)
+#  · ★★★ 은 거미집 4종만 나온다 (기존 ★★★ 형상은 이 테마에서 제외).
+#  · ★ / ★★ 형상과 확률(★ 69.3% · ★★ 29.7% · ★★★ 1%)은 일반 해석과 같다.
+# =============================================================================
+WEB_COLOR = UB_RED
+SPIDER_ASPECTS = [UNDERBOSS_ASPECT, MAESTRO_ASPECT, BIGSIS_ASPECT, ORACLE_ASPECT]
+ALL_ASPECTS = ASPECTS + SPIDER_ASPECTS
+GACHA_BANNERS = [
+    dict(id="normal", name="일반 해석", color=SHLD, sub="조각으로 형상을 해석한다"),
+    dict(id="web", name="특별해석 {거미집}", color=WEB_COLOR,
+         sub="★★★ 은 거미집 형상 4종만 등장한다"),
+]
+
+
+def banner_aspects(banner):
+    """이 해석 테마에서 나올 수 있는 형상 전체."""
+    if banner == "web":
+        return [a for a in ASPECTS if a["star"] <= 2] + SPIDER_ASPECTS
+    return list(ASPECTS)
+
+
+def banner_pool(banner):
+    """(형상, 가중치) 목록. 등급 안에서는 균등하다."""
+    pool = banner_aspects(banner)
+    out = []
+    for star, total in ((1, 69.3), (2, 29.7), (3, 1.0)):
+        grp = [a for a in pool if a["star"] == star]
+        out.extend((a, total / len(grp)) for a in grp)
+    return out
+
+
+WEB_EFFECT_CATS = [
+    ("buff", "버프 (거미집 전용)", HEAL),
+    ("debuff", "디버프 (거미집 전용)", CURSE),
+    ("gauge", "형상 고유 수치 (거미집 전용)", SHLD),
+]
+WEB_EFFECTS = [
+    # ---- 버프 ----
+    dict(id="w_foresight", cat="buff", name="예지", color=UB_RED, scope="언더보스/C · 불완전한 예지안",
+         desc="공격당할 때 예지에 따라 주사위로 자동 회피 / 30~25: 5~6 · 24~19: 4~5 · 18~13: 3~4 · 12 이하: 1~3 / "
+              "회피 성공 시 예지 -3 · 턴 종료마다 -2 / 0이 되면 예지안 과열 / 배지 숫자 = 현재 예지"),
+    dict(id="w_ammo", cat="buff", name="가속탄", color=SPC, scope="언더보스/C",
+         desc="스킬 1/2/3 사용 시 1/2/3 소비 (최대 10) / 부족하면 추가 격파 고정피해가 발동하지 않는다 / "
+              "부족 시 스킬 2가 [세치오나투라 디 체르보]로 변경, 재장전되면 복귀 / [처분] 사용 시 10 획득"),
+    dict(id="w_masterpiece", cat="buff", name="걸작", color=SPC, scope="마에스트로/H · 일생의 작품",
+         desc="생체재료가 10에 도달하면 전부 소비하고 이번 전투 동안 획득 / 공격력 +5 / "
+              "티비아의 멜로디가 양 옆 대상에게도 피해를 준다"),
+    dict(id="w_melody", cat="buff", name="선율", color=MA_BONE, scope="마에스트로/H · 폐장",
+         desc="[폐장] 사용 시 아군이 획득 (이번 전투 동안) / 속도 +1 (최대 6) · 공격력 +5"),
+    dict(id="w_leva", cat="buff", name="레바테인", color=UB_RED, scope="큰누님/N · 봉인된 검",
+         desc="포장이 0이 되면 개방 / 공격력 +5 · 모든 스킬이 레바테인 전용 스킬로 변경 / "
+              "스킬이 적중하면 화상 5 부여 / 달아오르는 재미가 제거된다"),
+    dict(id="w_counter", cat="buff", name="반격", color=DMG, scope="큰누님/N · 방어행동",
+         desc="방어 행동이 방어 → 반격으로 변경 / 사용 턴 동안 받는 피해 40% 감소, 이후 받은 피해량의 50%를 반격 (처치 불가) / "
+              "반격 2회 사용마다 달아오르는 재미 -1"),
+    dict(id="w_unlock", cat="buff", name="해금", color=OR_GOLD, scope="신탁 대행자/H",
+         desc="전투 시작 시 해금 I / II: 속도 최소값 +1 / III: 속도 최소값 +1 · 공격력 +5 / "
+              "IV: 속도 최소값 +2 · 공격력 +5 (중첩되지 않음) / 가호가 2 이상이면 한 단계 상승"),
+    # ---- 디버프 ----
+    dict(id="w_rib", cat="debuff", name="간이늑골", color=MA_BONE, scope="마에스트로/H · 설치 미술 제 3호",
+         desc="대상의 속도 주사위 최대값이 절반 감소한다 / 매 턴 1 감소 · 0이 되면 소멸 / "
+              "[폐장]은 모든 적에게 3을 부여한다"),
+    dict(id="w_burn", cat="debuff", name="화상", color=BS_FIRE, scope="큰누님/N · 레바테인",
+         desc="라운드 시작 시 수치만큼 피해를 입고 전부 제거된다 / 레바테인 상태에서 스킬이 적중하면 5 부여 / "
+              "배지 숫자 = 화상 수치"),
+    # ---- 형상 고유 수치 ----
+    dict(id="w_overheat", cat="gauge", name="예지안 과열", color=UB_RED, scope="언더보스/C",
+         desc="예지가 0이 되면 시작 / 매 턴 +10 · 30이 되면 예지 30으로 복귀 / "
+              "과열 중에는 자동 회피 불가 · 스킬 3이 [처분]으로 변경 (한 번 쓰면 스킬 3으로 복귀)"),
+    dict(id="w_view", cat="gauge", name="조망", color=UB_RED, scope="마에스트로/H",
+         desc="전투 시작 시 21 · 턴 시작 시 -2 · 아군이 수비 행동 외 행동 시 -1 (턴당 최대 -4) / "
+              "0이 되면 스킬 3이 [폐장]으로 변경 (전투당 1회) / 조망 자체는 효과가 없다"),
+    dict(id="w_material", cat="gauge", name="생체재료", color=MA_BONE, scope="마에스트로/H",
+         desc="전투 시작 시 1 · 스킬 1/2/3 사용마다 +1/+2/+3 / 10에 도달하면 전부 소비하고 걸작 획득"),
+    dict(id="w_wrap", cat="gauge", name="포장", color=BS_FIRE, scope="큰누님/N",
+         desc="전투 시작 시 3 / 포장 1당 스킬 피해 5 감소 / 0이 되면 [레바테인] 개방 / "
+              "{포장을 벗겨볼까}로도 소모된다"),
+    dict(id="w_fun", cat="gauge", name="달아오르는 재미", color=SPC, scope="큰누님/N",
+         desc="전투 시작 시 2 · 스킬 2/3 사용 시 -1 / 0이 되면 {포장을 벗겨볼까} 사용 가능 / "
+              "{포장을 벗겨볼까} 사용 후 2 획득 · 레바테인 개방 시 제거"),
+    dict(id="w_hermes", cat="gauge", name="헤르메스", color=OR_GOLD, scope="신탁 대행자/H · 모조된 삶",
+         desc="안 쓴 무기로 스킬을 사용하면 +1 (턴당 3회) · 해금 IV 도달 시 7 이하면 +2 (전투당 1회) / "
+              "9가 되면 전부 제거 · SP 6까지 회복 · 스킬 3이 [Furioso-Replica]로 변경"),
+    dict(id="w_grace", cat="gauge", name="가호", color=OR_SKY, scope="신탁 대행자/H · 지령",
+         desc="적 처치 / 한 턴에 40 이상 피해 / 공격 회피 시 +1 (턴당 1회) · 스킬 3 사용 시 +1 / "
+              "2 이상이면 해금 단계 상승 후 초기화 (가호는 로그에만 표시)"),
+    dict(id="w_terminal", cat="gauge", name="신탁 단말기", color=OR_SKY, scope="신탁 대행자/H",
+         desc="스킬을 사용할 때마다 무기 9종 중 하나의 효과가 발동 / 손도끼·스틸레토·바스타드 소드: 없음 / "
+              "레이피어·랜스: 속도 감소 1·2 / 망치·채찍: 격파피해 +5·+10 / 검: 피해 +5 / 낫: 피해 ×1.3 후 +10"),
+]

@@ -223,7 +223,7 @@ class AdminMixin:
         self.txt(px + pw - 24, py + 20, state_txt, 11, MUT, mono=True, anchor="ne")
 
         # 탭
-        tabs = [("move", "이동"), ("item", "아이템"), ("aspect", "형상"), ("adm", "어드민형상"),
+        tabs = [("move", "이동"), ("item", "아이템"), ("aspect", "형상"),
                 ("misc", "기타")]
         tw = 98
         for i, (tid, label) in enumerate(tabs):
@@ -241,10 +241,6 @@ class AdminMixin:
         body_y = py + 96
         idx = 0
         gap = 10
-        ub_detail_idx = None
-        ma_detail_idx = None
-        bs_detail_idx = None
-        or_detail_idx = None
 
         if self.admin_tab == "move":
             bw = (iw - gap * 4) / 5
@@ -328,172 +324,6 @@ class AdminMixin:
                       lambda: self.admin_item_reset("dim_wish"), MUT, idx)
             idx += 1
 
-        elif self.admin_tab == "adm":
-            cw = (iw - gap * 3) / 4
-            self.txt(ix, body_y, "★★★★ 어드민 전용 형상", 15, UB_RED, bold=True)
-            self.txt(ix + 196, body_y + 3, "형상해석 · 서재 도감에는 나오지 않는다 · 장착은 이번 전투에서만 유지된다",
-                     11, MUT, mono=True)
-            cu, hu, nu = self.units.get("C"), self.units.get("H"), self.units.get("N")
-            if cu and self.is_underboss(cu):
-                ub_st = "장착 중 · %s · 가속탄 %d/%d" % (
-                    ("예지안 과열 %d/30" % cu.ub_overheat) if cu.ub_overheat >= 0
-                    else ("예지 %d" % cu.ub_foresight), cu.ub_ammo, UB_AMMO_MAX)
-            else:
-                ub_st = "C 미장착"
-            if hu and self.is_maestro(hu):
-                ma_st = "장착 중 · 조망 %d · 생체재료 %d/10 · %s" % (
-                    hu.ma_view, hu.ma_material, "걸작 보유" if hu.ma_masterpiece else "걸작 없음")
-            else:
-                ma_st = "H 미장착"
-            if nu and self.is_bigsis(nu):
-                bs_st = "장착 중 · 포장 %d · %s" % (
-                    nu.bs_wrap, "레바테인 개방" if nu.bs_leva else ("달아오르는 재미 %d" % nu.bs_fun))
-            else:
-                bs_st = "N 미장착"
-            if hu and self.is_oracle(hu):
-                or_st = "장착 중 · 해금 %s · 헤르메스 %d/9 · 가호 %d" % (
-                    OR_ROMAN[hu.or_unlock], hu.or_hermes, hu.or_grace)
-            else:
-                or_st = "H 미장착"
-            cols = [("언더보스/C", ub_st, self.admin_equip_underboss, self.admin_unequip_underboss, "ub"),
-                    ("마에스트로/H", ma_st, self.admin_equip_maestro, self.admin_unequip_maestro, "ma"),
-                    ("큰누님/N", bs_st, self.admin_equip_bigsis, self.admin_unequip_bigsis, "bs"),
-                    ("신탁 대행자/H", or_st, self.admin_equip_oracle, self.admin_unequip_oracle, "or")]
-            for ci, (title, st, eq, uneq, key) in enumerate(cols):
-                cx = ix + ci * (cw + gap)
-                on = st.startswith("장착 중")
-                self.canvas.create_rectangle(cx, body_y + 30, cx + cw, body_y + 340, fill=PANEL,
-                                             outline=UB_RED if on else BRD, tags="ui")
-                self.txt(cx + cw / 2, body_y + 52, title, 15, UB_RED, bold=True, anchor="center")
-                self.wtxt(cx + 10, body_y + 76, cw - 20, st, 11, HEAL if on else MUT, mono=True)
-                self.abtn(cx + 10, body_y + 140, cw - 20, 40, "장착", None, eq, UB_RED, idx)
-                idx += 1
-                self.abtn(cx + 10, body_y + 188, cw - 20, 40, "장착 해제", None, uneq, MUT, idx)
-                idx += 1
-                if key == "ub":
-                    ub_detail_idx = idx
-                elif key == "ma":
-                    ma_detail_idx = idx
-                elif key == "bs":
-                    bs_detail_idx = idx
-                else:
-                    or_detail_idx = idx
-                self.abtn(cx + 10, body_y + 236, cw - 20, 50, "스킬 상세", "마우스를 올리면 표시",
-                          lambda: None, UB_RED, idx)
-                idx += 1
-                if key == "or":
-                    hw = (cw - 24) / 2
-                    self.abtn(cx + 10, body_y + 294, hw, 38, "헤르메스 +3", None,
-                              lambda: self.admin_oracle_hermes(3), OR_GOLD, idx)
-                    idx += 1
-                    self.abtn(cx + 14 + hw, body_y + 294, hw, 38, "해금 +1", None,
-                              self.admin_oracle_unlock, OR_GOLD, idx)
-                    idx += 1
-
-        elif self.admin_tab == "ub":
-            mw = (iw - gap * 3) / 4
-            cu = self.units.get("C")
-            on = bool(cu and self.is_underboss(cu))
-            self.txt(ix, body_y, "★★★★ 언더보스/C — 어드민 전용 형상", 15, UB_RED, bold=True)
-            self.txt(ix, body_y + 26, "형상해석 · 서재 도감에는 나오지 않는다. 장착은 이번 전투에서만 유지된다.",
-                     11, MUT, mono=True)
-            if on:
-                state = ("예지안 과열 %d/30" % cu.ub_overheat) if cu.ub_overheat >= 0 \
-                    else ("예지 %d" % cu.ub_foresight)
-                st = "C 장착 중 · %s · 가속탄 %d/%d" % (state, cu.ub_ammo, UB_AMMO_MAX)
-            else:
-                st = "C 미장착"
-            self.txt(ix, body_y + 48, st, 12, HEAL if on else MUT, mono=True)
-            self.abtn(ix, body_y + 80, mw, 46, "C에게 장착", "언더보스/C",
-                      self.admin_equip_underboss, UB_RED, idx)
-            idx += 1
-            self.abtn(ix + mw + gap, body_y + 80, mw, 46, "장착 해제", "원래 형상으로",
-                      self.admin_unequip_underboss, MUT, idx)
-            idx += 1
-            ub_detail_idx = idx
-            self.abtn(ix, body_y + 140, iw, 60, "패시브 · 스킬 상세",
-                      "마우스를 올리면 전체 내용이 표시된다", lambda: None, UB_RED, idx)
-            idx += 1
-
-        elif self.admin_tab == "ma":
-            mw = (iw - gap * 3) / 4
-            hu = self.units.get("H")
-            on = bool(hu and self.is_maestro(hu))
-            self.txt(ix, body_y, "★★★★ 마에스트로/H — 어드민 전용 형상", 15, UB_RED, bold=True)
-            self.txt(ix, body_y + 26, "형상해석 · 서재 도감에는 나오지 않는다. 장착은 이번 전투에서만 유지된다.",
-                     11, MUT, mono=True)
-            if on:
-                st = "H 장착 중 · 조망 %d · 생체재료 %d/10 · %s" % (
-                    hu.ma_view, hu.ma_material, "걸작 보유" if hu.ma_masterpiece else "걸작 없음")
-            else:
-                st = "H 미장착"
-            self.txt(ix, body_y + 48, st, 12, HEAL if on else MUT, mono=True)
-            self.abtn(ix, body_y + 80, mw, 46, "H에게 장착", "마에스트로/H",
-                      self.admin_equip_maestro, UB_RED, idx)
-            idx += 1
-            self.abtn(ix + mw + gap, body_y + 80, mw, 46, "장착 해제", "원래 형상으로",
-                      self.admin_unequip_maestro, MUT, idx)
-            idx += 1
-            ma_detail_idx = idx
-            self.abtn(ix, body_y + 140, iw, 60, "기본효과 · 패시브 · 스킬 상세",
-                      "마우스를 올리면 전체 내용이 표시된다", lambda: None, UB_RED, idx)
-            idx += 1
-
-        elif self.admin_tab == "bs":
-            mw = (iw - gap * 3) / 4
-            nu = self.units.get("N")
-            on = bool(nu and self.is_bigsis(nu))
-            self.txt(ix, body_y, "★★★★ 큰누님/N — 어드민 전용 형상", 15, UB_RED, bold=True)
-            self.txt(ix, body_y + 26, "형상해석 · 서재 도감에는 나오지 않는다. 장착은 이번 전투에서만 유지된다.",
-                     11, MUT, mono=True)
-            if on:
-                st = "N 장착 중 · 포장 %d · 달아오르는 재미 %d · %s" % (
-                    nu.bs_wrap, nu.bs_fun, "레바테인 개방" if nu.bs_leva else "봉인 중")
-            else:
-                st = "N 미장착"
-            self.txt(ix, body_y + 48, st, 12, HEAL if on else MUT, mono=True)
-            self.abtn(ix, body_y + 80, mw, 46, "N에게 장착", "큰누님/N",
-                      self.admin_equip_bigsis, UB_RED, idx)
-            idx += 1
-            self.abtn(ix + mw + gap, body_y + 80, mw, 46, "장착 해제", "원래 형상으로",
-                      self.admin_unequip_bigsis, MUT, idx)
-            idx += 1
-            bs_detail_idx = idx
-            self.abtn(ix, body_y + 140, iw, 60, "기본효과 · 패시브 · 스킬 상세",
-                      "마우스를 올리면 전체 내용이 표시된다", lambda: None, UB_RED, idx)
-            idx += 1
-
-        elif self.admin_tab == "or":
-            mw = (iw - gap * 3) / 4
-            hu = self.units.get("H")
-            on = bool(hu and self.is_oracle(hu))
-            self.txt(ix, body_y, "★★★★ 신탁 대행자/H — 어드민 전용 형상", 15, UB_RED, bold=True)
-            self.txt(ix, body_y + 26, "형상해석 · 서재 도감에는 나오지 않는다. 장착은 이번 전투에서만 유지된다.",
-                     11, MUT, mono=True)
-            if on:
-                st = "H 장착 중 · 해금 %s · 헤르메스 %d/9 · 가호 %d · %s" % (
-                    OR_ROMAN[hu.or_unlock], hu.or_hermes, hu.or_grace,
-                    "Furioso 준비" if hu.or_furioso else "Furioso 대기")
-            else:
-                st = "H 미장착"
-            self.txt(ix, body_y + 48, st, 12, HEAL if on else MUT, mono=True)
-            self.abtn(ix, body_y + 80, mw, 46, "H에게 장착", "신탁 대행자/H",
-                      self.admin_equip_oracle, UB_RED, idx)
-            idx += 1
-            self.abtn(ix + mw + gap, body_y + 80, mw, 46, "장착 해제", "원래 형상으로",
-                      self.admin_unequip_oracle, MUT, idx)
-            idx += 1
-            self.abtn(ix + 2 * (mw + gap), body_y + 80, mw, 46, "헤르메스 +3", "테스트용",
-                      lambda: self.admin_oracle_hermes(3), OR_GOLD, idx)
-            idx += 1
-            self.abtn(ix + 3 * (mw + gap), body_y + 80, mw, 46, "해금 +1", "I → IV 테스트용",
-                      self.admin_oracle_unlock, OR_GOLD, idx)
-            idx += 1
-            or_detail_idx = idx
-            self.abtn(ix, body_y + 140, iw, 60, "기본효과 · 패시브 · 스킬 상세",
-                      "마우스를 올리면 전체 내용이 표시된다", lambda: None, UB_RED, idx)
-            idx += 1
-
         elif self.admin_tab == "aspect":
             mw = (iw - gap * 3) / 4
             self.txt(ix, body_y, "형상해석 재화 — 조각 %d · 형상파편 %d"
@@ -549,14 +379,6 @@ class AdminMixin:
                   self.close_admin, MUT, idx)
         self.txt(px + pw / 2, py + ph - 8, "전투 중 'maki' 를 입력하면 언제든 다시 열린다.",
                  10, MUT, mono=True, anchor="center")
-        if ub_detail_idx is not None and self.hover == ("adm", ub_detail_idx):
-            self.draw_aspect_tip(UNDERBOSS_ASPECT)
-        if ma_detail_idx is not None and self.hover == ("adm", ma_detail_idx):
-            self.draw_aspect_tip(MAESTRO_ASPECT)
-        if bs_detail_idx is not None and self.hover == ("adm", bs_detail_idx):
-            self.draw_aspect_tip(BIGSIS_ASPECT)
-        if or_detail_idx is not None and self.hover == ("adm", or_detail_idx):
-            self.draw_aspect_tip(ORACLE_ASPECT)
 
     # ---------------- 어드민 ----------------
     def _admin_orch_unit(self):

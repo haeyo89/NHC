@@ -363,6 +363,7 @@ class NHCBattle(GachaMixin, LibraryMixin, WorkshopMixin, AdminMixin, AdminAspect
             self.equipped = {"N": "n_base", "H": "h_base", "C": "c_base", "D": "d_base"}
         self.pity_choice_open = False
         self.pity_choice_tier = 0
+        self.gacha_banner = self.__dict__.get("gacha_banner", "normal")   # 형상해석 테마 (normal / web)
         self.formation_open = False
         self.gacha_open = False
         self.codex_open = False
@@ -5230,6 +5231,8 @@ class NHCBattle(GachaMixin, LibraryMixin, WorkshopMixin, AdminMixin, AdminAspect
             return "break"
         if self.char_key(ev):
             return
+        if self.theme_arrow_key(ev):
+            return
         if self.story_key(ev):
             return
         if ev.keysym == "Escape":
@@ -5288,7 +5291,7 @@ class NHCBattle(GachaMixin, LibraryMixin, WorkshopMixin, AdminMixin, AdminAspect
             if unit.side != "ally":
                 continue
             aid = eq.get(cid)
-            asp = next((a for a in ASPECTS if a["id"] == aid), None)
+            asp = next((a for a in ALL_ASPECTS if a["id"] == aid), None)
             if not asp or aid not in owned:
                 continue
             unit.aspect_id = aid
@@ -5760,10 +5763,7 @@ class NHCBattle(GachaMixin, LibraryMixin, WorkshopMixin, AdminMixin, AdminAspect
 
     def find_aspect(self, aid):
         """형상 id 로 형상 데이터를 찾는다 (숨김 형상 포함)."""
-        for _h in (UNDERBOSS_ASPECT, MAESTRO_ASPECT, BIGSIS_ASPECT, ORACLE_ASPECT):
-            if aid == _h["id"]:
-                return _h
-        return next((a for a in ASPECTS if a["id"] == aid), None)
+        return next((a for a in ALL_ASPECTS if a["id"] == aid), None)
 
 
     # ================================================================

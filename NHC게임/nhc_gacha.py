@@ -35,7 +35,7 @@ class GachaMixin:
         self.render()
 
     def equip_aspect(self, aspect_id):
-        aspect = next((item for item in ASPECTS if item["id"] == aspect_id), None)
+        aspect = next((item for item in ALL_ASPECTS if item["id"] == aspect_id), None)
         if not aspect or aspect_id not in self.owned_aspects:
             return
         unit = self.roster.get(aspect["char"])
@@ -58,11 +58,21 @@ class GachaMixin:
             unit.imperial_safety_round = None
             unit.imperial_safety_used = False
             unit.imperial_guardian_target = None
+            if self.is_bigsis(unit):
+                self.bs_clear(unit)
         unit.aspect_id = aspect_id
         self.__dict__.setdefault("equipped", {})[aspect["char"]] = aspect_id
         unit.skills = aspect["skills"]
         unit.max_sp = 10 if aspect_id == "n_imperial" else MAX_SP
         unit.sp = min(unit.sp, unit.max_sp)
+        if aspect_id == "c_underboss":
+            self.ub_reset(unit)
+        elif aspect_id == "h_maestro":
+            self.ma_reset(unit)
+        elif aspect_id == "n_bigsis":
+            self.bs_reset(unit)
+        elif aspect_id == "h_oracle":
+            self.or_reset(unit)
         self.gacha_notice = "%s 장착 완료." % aspect["title"]
         self.log("%s에게 [%s] 형상을 장착했다." % (unit.name, aspect["title"]), STAR_COLOR[aspect["star"]])
         self.render()
@@ -71,24 +81,25 @@ class GachaMixin:
         if self.aspect_shards < cost:
             return
         self.aspect_shards -= cost
-        total = sum(a["w"] for a in GACHA_POOL)
+        pool = banner_pool(self.gacha_banner)
+        total = sum(w for _, w in pool)
         results = []
         for _ in range(count):
             r = random.random() * total
-            pick = GACHA_POOL[-1]
-            for a in GACHA_POOL:
-                if r < a["w"]:
+            pick = pool[-1][0]
+            for a, w in pool:
+                if r < w:
                     pick = a
                     break
-                r -= a["w"]
+                r -= w
             results.append((pick, pick["id"] not in self.owned_aspects))
             self.owned_aspects.add(pick["id"])
         self.aspect_pity += count
         self.gacha_results = results
         self.gacha_notice = ""
         self.gacha_reveal = {"revealed": 0, "index": 0, "frame": 0}
-        self.log("형상해석 %d회 (조각 -%d) — ★★ %d개" %
-                 (count, cost, sum(1 for a, _ in results if a["star"] >= 2)), SPC)
+        self.log("%s %d회 (조각 -%d) — ★★ %d개" %
+                 (self.banner_info()["name"], count, cost, sum(1 for a, _ in results if a["star"] >= 2)), SPC)
         beep([(880, 50), (1046, 60), (1318, 90)], self.sound)
         self.render()
         self.schedule(28, self.gacha_reveal_step)
@@ -143,8 +154,31 @@ class GachaMixin:
         self.render()
 
     def unowned_tier_aspects(self, tier):
-        return [aspect for aspect in ASPECTS
+        return [aspect for aspect in banner_aspects(self.gacha_banner)
                 if aspect["star"] == tier and aspect["id"] not in self.owned_aspects]
+
+    def banner_info(self):
+        return next(b for b in GACHA_BANNERS if b["id"] == self.gacha_banner)
+
+    def set_gacha_banner(self, banner):
+        if banner == self.gacha_banner or self.gacha_reveal or self.pity_choice_open:
+            return
+        self.gacha_banner = banner
+        self.gacha_notice = ""
+        self.gacha_results = []
+        self.render()
+
+    def draw_theme_arrows(self, x_left, x_right, y, h, can_left, can_right, color, cb_left, cb_right,
+                          idx_left, idx_right):
+        """패널 양옆의 ◀ ▶ 넘김 버튼."""
+        for x, label, ok, cb, idx in ((x_left, "◀", can_left, cb_left, idx_left),
+                                      (x_right, "▶", can_right, cb_right, idx_right)):
+            hov = ok and self.hover == ("gch", idx)
+            self.canvas.create_rectangle(x, y, x + 40, y + h, fill=PANEL2 if hov else PANEL,
+                                         outline=color if ok else BRD, width=2 if hov else 1, tags="ui")
+            self.txt(x + 20, y + h / 2, label, 20, color if ok else BRD, bold=True, anchor="center")
+            self.buttons.append(dict(x=x, y=y, w=40, h=h, key=("gch", idx),
+                                     cb=(cb if ok else (lambda: None))))
 
     def unowned_tier2_aspects(self):
         return self.unowned_tier_aspects(2)
@@ -313,14 +347,22 @@ class GachaMixin:
         px, py = (WIN_W - pw) / 2, 30
         self.canvas.create_rectangle(px + 5, py + 5, px + pw + 5, py + ph + 5,
                                      fill="#05070A", outline="", stipple="gray50", tags="ui")
-        self.canvas.create_rectangle(px, py, px + pw, py + ph, fill=PANEL, outline=SHLD,
+        banner = self.banner_info()
+        bcol = banner["color"]
+        is_web = self.gacha_banner == "web"
+        self.canvas.create_rectangle(px, py, px + pw, py + ph, fill=PANEL, outline=bcol,
                                      width=2, tags="ui")
-        self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=SHLD, outline="", tags="ui")
+        self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=bcol, outline="", tags="ui")
         ix, iw = px + 24, pw - 48
 
         self.txt(ix, py + 14, "형상해석", 28, TXT, bold=True)
-        self.txt(ix + 140, py + 28, "조각으로 형상을 해석한다", 12, MUT, mono=True)
-        self.txt(px + pw - 24, py + 24, "[E] / [ESC] 닫기", 11, MUT, mono=True, anchor="ne")
+        self.txt(ix + 140, py + 16, banner["name"], 15, bcol, bold=True)
+        self.txt(ix + 140, py + 40, banner["sub"], 11, MUT, mono=True)
+        self.txt(px + pw - 24, py + 24, "[E] / [ESC] 닫기  ·  [← →] 테마", 11, MUT, mono=True, anchor="ne")
+        self.draw_theme_arrows(px - 50, px + pw + 10, py + ph / 2 - 40, 80,
+                               is_web, not is_web, bcol if is_web else GACHA_BANNERS[1]["color"],
+                               lambda: self.set_gacha_banner("normal"),
+                               lambda: self.set_gacha_banner("web"), 7, 8)
 
         # 재화
         for i, (label, val, color) in enumerate([("조각", self.aspect_shards, SPC),
@@ -338,9 +380,22 @@ class GachaMixin:
         self.txt(ix + 278, py + 127, "★★★  1%", 13, STAR_COLOR[3], bold=True)
 
         # 형상 도감으로 이동 (장착은 도감에서)
-        self.gbtn(ix, py + 142, 230, 30, "형상 도감 열기 · 장착 ▶", None,
-                  self.open_aspect_codex, SHLD, True, 6)
-        self.txt(ix + 246, py + 150, "해석한 형상은 도감에서 장착한다", 11, MUT, mono=True)
+        self.gbtn(ix, py + 142, 230, 30, "형상 도감 열기 · 장착 ▶" if not is_web else "거미집 형상 도감 · 장착 ▶",
+                  None, self.open_aspect_codex, bcol, True, 6)
+        if is_web:
+            chip_w = (iw - 246 - 3 * 6) / 4.0
+            for i, a in enumerate(SPIDER_ASPECTS):
+                cx = ix + 246 + i * (chip_w + 6)
+                owned = a["id"] in self.owned_aspects
+                hov = self.hover == ("gsp", i)
+                self.canvas.create_rectangle(cx, py + 142, cx + chip_w, py + 172,
+                                             fill=PANEL2 if hov else PANEL,
+                                             outline=bcol if owned else BRD, width=2 if hov else 1, tags="ui")
+                self.txt(cx + chip_w / 2, py + 157, "★★★ " + a["title"], 11, TXT if owned else MUT,
+                         bold=True, anchor="center")
+                self.buttons.append(dict(x=cx, y=py + 142, w=chip_w, h=30, key=("gsp", i), cb=lambda: None))
+        else:
+            self.txt(ix + 246, py + 150, "해석한 형상은 도감에서 장착한다", 11, MUT, mono=True)
 
         # 해석 버튼
         bw = (iw - 12) / 2
@@ -455,13 +510,15 @@ class GachaMixin:
         if isinstance(h, tuple):
             if h[0] == "gdex" and h[1] < len(ASPECTS):
                 self.draw_aspect_tip(ASPECTS[h[1]])
+            elif h[0] == "gsp" and h[1] < len(SPIDER_ASPECTS):
+                self.draw_aspect_tip(SPIDER_ASPECTS[h[1]])
             elif h[0] == "gcard" and h[1] < len(self.gacha_results):
                 self.draw_aspect_tip(self.gacha_results[h[1]][0])
         if self.pity_choice_open:
             self.render_pity_choice()
 
     def fx_gacha_rare(self, index, aspect):
-        accent = STAR_COLOR[3]
+        accent = WEB_COLOR if aspect.get("theme") == "web" else STAR_COLOR[3]
         cx, cy = WIN_W / 2, 332
         veil = self.canvas.create_rectangle(112, 202, WIN_W - 112, 456,
                                             fill="#160E20", outline=accent, width=2,
@@ -510,11 +567,27 @@ class GachaMixin:
 
     def open_aspect_codex(self):
         """형상해석 창에서 바로 형상 도감(장착 화면)으로 넘어간다."""
+        web = self.gacha_banner == "web"
         self.close_gacha()
         self.codex_open = True
-        self.codex_page = "aspect"
+        self.codex_page = "aspect_web" if web else "aspect"
         self.codex_sel = None
         self.render()
+
+    def theme_arrow_key(self, ev):
+        """← → 로 형상해석 테마 / 서재 페이지를 넘긴다."""
+        if ev.keysym not in ("Left", "Right"):
+            return False
+        right = ev.keysym == "Right"
+        if self.pity_choice_open:
+            return False
+        if self.gacha_open:
+            self.set_gacha_banner("web" if right else "normal")
+            return True
+        if self.codex_open and self.codex_page in ("menu", "menu_web"):
+            self.codex_flip("menu_web" if right else "menu")
+            return True
+        return False
 
     def lobby_aspect(self):
         self.gacha_open = True
