@@ -117,7 +117,8 @@ class LibraryMixin:
             ty += lh
 
     def codex_back(self):
-        self.codex_page = "menu_web" if self.codex_page.endswith("_web") else "menu"
+        key = self.codex_page.rsplit("_", 1)[-1]
+        self.codex_page = ("menu_" + key) if key in THEMES else "menu"
         self.codex_sel = None
         self.render()
 
@@ -127,7 +128,7 @@ class LibraryMixin:
         elif self.codex_page == "char":
             self.codex_page = "char_select"
             self.render()
-        elif self.codex_page not in ("menu", "menu_web"):
+        elif self.codex_page not in MENU_PAGES:
             self.codex_back()
         else:
             self.close_codex()
@@ -147,22 +148,28 @@ class LibraryMixin:
     def render_codex(self):
         if not self.codex_open:
             return
-        if self.codex_page in ("effect", "effect_web"):
-            self.render_effect_codex(self.codex_page == "effect_web")
-        elif self.codex_page in ("aspect", "aspect_web"):
-            self.render_aspect_codex(self.codex_page == "aspect_web")
+        key = self.codex_page.rsplit("_", 1)[-1]
+        th = key if key in THEMES else None
+        if self.codex_page == "effect" or (th and self.codex_page.startswith("effect_")):
+            self.render_effect_codex(th)
+        elif self.codex_page == "aspect" or (th and self.codex_page.startswith("aspect_")):
+            self.render_aspect_codex(th)
         elif self.codex_page == "char_select":
             self.render_char_select()
         elif self.codex_page == "char":
             self.render_char_page()
         elif self.codex_page == "workshop":
             self.render_workshop()
-        elif self.codex_page == "menu_web":
-            self.render_library_menu(True)
+        elif self.codex_page in MENU_PAGES and self.codex_page != "menu":
+            self.render_library_menu(self.codex_page[5:])
         else:
             self.render_library_menu()
 
-    def render_library_menu(self, web=False):
+    def render_library_menu(self, th=None):
+        web = bool(th)
+        tdata = THEMES.get(th)
+        n_pages = len(MENU_PAGES)
+        cur = MENU_PAGES.index("menu_" + th) if th else 0
         self.buttons = []
         self.canvas.create_rectangle(0, 0, WIN_W, WIN_H, fill="#000000", outline="",
                                      stipple="gray75", tags="ui")
@@ -170,23 +177,24 @@ class LibraryMixin:
         px, py = (WIN_W - pw) / 2, 250
         self.canvas.create_rectangle(px + 5, py + 5, px + pw + 5, py + ph + 5,
                                      fill="#05070A", outline="", stipple="gray50", tags="ui")
-        mcol = WEB_COLOR if web else SPC
+        mcol = tdata["color"] if web else SPC
         self.canvas.create_rectangle(px, py, px + pw, py + ph, fill=PANEL, outline=mcol,
                                      width=2, tags="ui")
         self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=mcol, outline="", tags="ui")
         self.txt(px + 24, py + 16, "서재", 30, TXT, bold=True)
         if web:
-            self.txt(px + 108, py + 26, "{거미집} 테마", 16, WEB_COLOR, bold=True)
-        self.txt(px + 24, py + 62, "열람할 도감을 고르세요  (2 / 2)" if web else "열람할 도감을 고르세요  (1 / 2)",
+            self.txt(px + 108, py + 26, "{%s} 테마" % tdata["label"], 16, mcol, bold=True)
+        self.txt(px + 24, py + 62, "열람할 도감을 고르세요  (%d / %d)" % (cur + 1, n_pages),
                  12, MUT, mono=True)
         self.txt(px + pw - 24, py + 24, "[F] / [ESC] 닫기  ·  [← →] 테마", 11, MUT, mono=True, anchor="ne")
-        for ax, label, ok, target, idx in ((px - 50, "◀", web, "menu", 20),
-                                           (px + pw + 10, "▶", not web, "menu_web", 21)):
+        for ax, label, ok, target, idx in (
+                (px - 50, "◀", cur > 0, MENU_PAGES[max(cur - 1, 0)], 20),
+                (px + pw + 10, "▶", cur < n_pages - 1, MENU_PAGES[min(cur + 1, n_pages - 1)], 21)):
             ahov = ok and self.hover == ("lib", idx)
             ay = py + ph / 2 - 40
             self.canvas.create_rectangle(ax, ay, ax + 40, ay + 80, fill=PANEL2 if ahov else PANEL,
-                                         outline=WEB_COLOR if ok else BRD, width=2 if ahov else 1, tags="ui")
-            self.txt(ax + 20, ay + 40, label, 20, WEB_COLOR if ok else BRD, bold=True, anchor="center")
+                                         outline=mcol if ok else BRD, width=2 if ahov else 1, tags="ui")
+            self.txt(ax + 20, ay + 40, label, 20, mcol if ok else BRD, bold=True, anchor="center")
             self.buttons.append(dict(x=ax, y=ay, w=40, h=80, key=("lib", idx),
                                      cb=(lambda t=target: self.codex_flip(t)) if ok else (lambda: None)))
         self.canvas.create_line(px + 24, py + 84, px + pw - 24, py + 84, fill=BRD, tags="ui")
@@ -203,11 +211,12 @@ class LibraryMixin:
         ]
         if web:
             entries = [
-                ("거미집 전투효과 도감", "{거미집} 전용 버프 · 디버프 · 수치 %d종" % len(WEB_EFFECTS),
-                 WEB_COLOR, "effect_web"),
-                ("거미집 형상 도감", "보유 %d/%d · 클릭해 장착" % (
-                    sum(1 for a in SPIDER_ASPECTS if a["id"] in self.owned_aspects), len(SPIDER_ASPECTS)),
-                 WEB_COLOR, "aspect_web"),
+                ("%s 전투효과 도감" % tdata["label"],
+                 "{%s} 전용 버프 · 디버프 · 수치 %d종" % (tdata["label"], len(tdata["effects"])) if tdata["effects"]
+                 else "아직 등록된 효과가 없다 (임시)", mcol, "effect_" + th),
+                ("%s 형상 도감" % tdata["label"], "보유 %d/%d · 클릭해 장착" % (
+                    sum(1 for a in tdata["aspects"] if a["id"] in self.owned_aspects), len(tdata["aspects"]))
+                 if tdata["aspects"] else "아직 등록된 형상이 없다 (임시)", mcol, "aspect_" + th),
             ]
         for i, (name, sub, color, page) in enumerate(entries):
             bx = px + 24 + i * (bw + gap)
@@ -222,9 +231,10 @@ class LibraryMixin:
             self.buttons.append(dict(x=bx, y=by, w=bw, h=bh, key=("lib", i),
                                      cb=(lambda p=page: self.codex_goto(p))))
 
-    def render_aspect_codex(self, web=False):
-        lst = SPIDER_ASPECTS if web else ASPECTS
-        pcol = WEB_COLOR if web else SHLD
+    def render_aspect_codex(self, th=None):
+        web = bool(th)
+        lst = THEMES[th]["aspects"] if web else ASPECTS
+        pcol = THEMES[th]["color"] if web else SHLD
         self.buttons = []
         self.canvas.create_rectangle(0, 0, WIN_W, WIN_H, fill="#000000", outline="",
                                      stipple="gray75", tags="ui")
@@ -237,8 +247,8 @@ class LibraryMixin:
         self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=pcol, outline="", tags="ui")
         ix, iw = px + 24, pw - 48
 
-        self.txt(ix, py + 14, "거미집 형상 도감" if web else "형상 도감", 28, TXT, bold=True)
-        self.txt(ix + (260 if web else 170), py + 28, "보유 형상을 클릭해 장착 · 마우스를 올리면 스킬 확인", 12, MUT,
+        self.txt(ix, py + 14, "%s 형상 도감" % THEMES[th]["label"] if web else "형상 도감", 28, TXT, bold=True)
+        self.txt(ix + (290 if web else 170), py + 28, "보유 형상을 클릭해 장착 · 마우스를 올리면 스킬 확인", 12, MUT,
                  mono=True)
         self.txt(px + pw - 24, py + 24, "[F] 닫기 · [ESC] 서재로", 11, MUT, mono=True, anchor="ne")
         self.canvas.create_line(ix, py + 60, ix + iw, py + 60, fill=BRD, tags="ui")
@@ -269,6 +279,8 @@ class LibraryMixin:
             cb = (lambda aid=a["id"]: self.equip_aspect(aid)) if owned else (lambda: None)
             self.buttons.append(dict(x=dx, y=dy, w=cw, h=ch, key=("adx", i), cb=cb))
 
+        if not lst:
+            self.txt(ix + iw / 2, y0 + 60, "이 테마 전용 형상은 아직 없다. (임시)", 14, MUT, anchor="center")
         rows = (len(lst) + per_row - 1) // per_row
         sy = y0 + rows * (ch + gap) + 6
         parts = []
@@ -759,11 +771,12 @@ class LibraryMixin:
         self.txt(px + pw - 24, py + ph - 30, "[F] 닫기 · [ESC] 목록으로", 11, MUT, mono=True,
                  anchor="e")
 
-    def render_effect_codex(self, web=False):
+    def render_effect_codex(self, th=None):
+        web = bool(th)
         if not self.codex_open:
             return
-        effects, cats = (WEB_EFFECTS, WEB_EFFECT_CATS) if web else (EFFECTS, EFFECT_CATS)
-        ecol = WEB_COLOR if web else BRKC
+        effects, cats = (THEMES[th]["effects"], THEMES[th]["cats"]) if web else (EFFECTS, EFFECT_CATS)
+        ecol = THEMES[th]["color"] if web else BRKC
         self.buttons = []     # 뒤쪽 버튼이 눌리지 않도록 교체
         self.canvas.create_rectangle(0, 0, WIN_W, WIN_H, fill="#000000", outline="",
                                      stipple="gray75", tags="ui")
@@ -776,8 +789,8 @@ class LibraryMixin:
         self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=ecol, outline="", tags="ui")
         ix, iw = px + 24, pw - 48
 
-        self.txt(ix, py + 14, "거미집 전투효과 도감" if web else "전투효과 도감", 28, TXT, bold=True)
-        self.txt(ix + (304 if web else 214), py + 28, "마우스를 올리면 설명 · 클릭하면 아래에 고정", 12, MUT, mono=True)
+        self.txt(ix, py + 14, "%s 전투효과 도감" % THEMES[th]["label"] if web else "전투효과 도감", 28, TXT, bold=True)
+        self.txt(ix + (340 if web else 214), py + 28, "마우스를 올리면 설명 · 클릭하면 아래에 고정", 12, MUT, mono=True)
         self.txt(px + pw - 24, py + 24, "[F] 닫기 · [ESC] 서재로", 11, MUT, mono=True, anchor="ne")
         self.canvas.create_line(ix, py + 60, ix + iw, py + 60, fill=BRD, tags="ui")
 
@@ -815,6 +828,9 @@ class LibraryMixin:
                                          cb=(lambda k=idx: self.select_effect(k))))
             rows = (len(items) + per_row - 1) // per_row
             y += rows * (chip_h + gap) + 8
+
+        if not effects:
+            self.txt(ix + iw / 2, y + 40, "이 테마 전용 전투효과는 아직 없다. (임시)", 14, MUT, anchor="center")
 
         # 고정된 상세 설명
         dy = py + ph - 138

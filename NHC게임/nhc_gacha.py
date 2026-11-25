@@ -349,7 +349,9 @@ class GachaMixin:
                                      fill="#05070A", outline="", stipple="gray50", tags="ui")
         banner = self.banner_info()
         bcol = banner["color"]
+        bi = BANNER_IDS.index(self.gacha_banner)
         is_web = self.gacha_banner == "web"
+        theme = THEMES.get(self.gacha_banner)
         self.canvas.create_rectangle(px, py, px + pw, py + ph, fill=PANEL, outline=bcol,
                                      width=2, tags="ui")
         self.canvas.create_rectangle(px, py, px + pw, py + 5, fill=bcol, outline="", tags="ui")
@@ -360,9 +362,10 @@ class GachaMixin:
         self.txt(ix + 140, py + 40, banner["sub"], 11, MUT, mono=True)
         self.txt(px + pw - 24, py + 24, "[E] / [ESC] 닫기  ·  [← →] 테마", 11, MUT, mono=True, anchor="ne")
         self.draw_theme_arrows(px - 50, px + pw + 10, py + ph / 2 - 40, 80,
-                               is_web, not is_web, bcol if is_web else GACHA_BANNERS[1]["color"],
-                               lambda: self.set_gacha_banner("normal"),
-                               lambda: self.set_gacha_banner("web"), 7, 8)
+                               bi > 0, bi < len(BANNER_IDS) - 1,
+                               bcol,
+                               lambda: self.set_gacha_banner(BANNER_IDS[bi - 1]),
+                               lambda: self.set_gacha_banner(BANNER_IDS[bi + 1]), 7, 8)
 
         # 재화
         for i, (label, val, color) in enumerate([("조각", self.aspect_shards, SPC),
@@ -375,12 +378,14 @@ class GachaMixin:
 
         # 확률
         self.txt(ix, py + 128, "확률", 11, MUT, mono=True)
-        self.txt(ix + 50, py + 127, "★  69.3%", 13, STAR_COLOR[1], bold=True)
-        self.txt(ix + 160, py + 127, "★★  29.7%", 13, STAR_COLOR[2], bold=True)
-        self.txt(ix + 278, py + 127, "★★★  1%", 13, STAR_COLOR[3], bold=True)
+        rx = ix + 50
+        for st, pct in banner_rates(self.gacha_banner).items():
+            label = "%s  %s%%" % ("★" * st, ("%.1f" % pct).rstrip("0").rstrip("."))
+            self.txt(rx, py + 127, label, 13, STAR_COLOR[st], bold=True)
+            rx += 110 + 8 * st
 
         # 형상 도감으로 이동 (장착은 도감에서)
-        self.gbtn(ix, py + 142, 230, 30, "형상 도감 열기 · 장착 ▶" if not is_web else "거미집 형상 도감 · 장착 ▶",
+        self.gbtn(ix, py + 142, 230, 30, "형상 도감 열기 · 장착 ▶" if not theme else "%s 형상 도감 · 장착 ▶" % theme["label"],
                   None, self.open_aspect_codex, bcol, True, 6)
         if is_web:
             chip_w = (iw - 246 - 3 * 6) / 4.0
@@ -394,6 +399,8 @@ class GachaMixin:
                 self.txt(cx + chip_w / 2, py + 157, "★★★ " + a["title"], 11, TXT if owned else MUT,
                          bold=True, anchor="center")
                 self.buttons.append(dict(x=cx, y=py + 142, w=chip_w, h=30, key=("gsp", i), cb=lambda: None))
+        elif theme:
+            self.txt(ix + 246, py + 150, "이 테마 전용 형상은 아직 없다 (임시)", 11, MUT, mono=True)
         else:
             self.txt(ix + 246, py + 150, "해석한 형상은 도감에서 장착한다", 11, MUT, mono=True)
 
@@ -567,10 +574,9 @@ class GachaMixin:
 
     def open_aspect_codex(self):
         """형상해석 창에서 바로 형상 도감(장착 화면)으로 넘어간다."""
-        web = self.gacha_banner == "web"
         self.close_gacha()
         self.codex_open = True
-        self.codex_page = "aspect_web" if web else "aspect"
+        self.codex_page = ("aspect_" + self.gacha_banner) if self.gacha_banner != "normal" else "aspect"
         self.codex_sel = None
         self.render()
 
@@ -582,10 +588,14 @@ class GachaMixin:
         if self.pity_choice_open:
             return False
         if self.gacha_open:
-            self.set_gacha_banner("web" if right else "normal")
+            i = BANNER_IDS.index(self.gacha_banner) + (1 if right else -1)
+            if 0 <= i < len(BANNER_IDS):
+                self.set_gacha_banner(BANNER_IDS[i])
             return True
-        if self.codex_open and self.codex_page in ("menu", "menu_web"):
-            self.codex_flip("menu_web" if right else "menu")
+        if self.codex_open and self.codex_page in MENU_PAGES:
+            i = MENU_PAGES.index(self.codex_page) + (1 if right else -1)
+            if 0 <= i < len(MENU_PAGES):
+                self.codex_flip(MENU_PAGES[i])
             return True
         return False
 

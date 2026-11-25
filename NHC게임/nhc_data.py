@@ -852,25 +852,45 @@ if "GACHA_POOL" in globals() and GACHA_POOL is not ASPECTS:
 WEB_COLOR = UB_RED
 SPIDER_ASPECTS = [UNDERBOSS_ASPECT, MAESTRO_ASPECT, BIGSIS_ASPECT, ORACLE_ASPECT]
 ALL_ASPECTS = ASPECTS + SPIDER_ASPECTS
+WAL_COLOR = "#3FD17A"        # {발푸르기스의 밤} — 초록 톤
 GACHA_BANNERS = [
     dict(id="normal", name="일반 해석", color=SHLD, sub="조각으로 형상을 해석한다"),
     dict(id="web", name="특별해석 {거미집}", color=WEB_COLOR,
          sub="★★★ 은 거미집 형상 4종만 등장한다"),
+    dict(id="wal", name="특별해석 {발푸르기스의 밤}", color=WAL_COLOR,
+         sub="임시 배너 · ★★★ 은 나오지 않는다"),
 ]
+BANNER_IDS = [b["id"] for b in GACHA_BANNERS]
+
+# 테마 전용 도감 (서재 2페이지~). aspects: 그 테마에서만 나오는 형상 / effects: 전용 전투효과
+THEMES = {
+    "web": dict(label="거미집", color=WEB_COLOR, aspects=SPIDER_ASPECTS),
+    "wal": dict(label="발푸르기스의 밤", color=WAL_COLOR, aspects=[]),
+}
 
 
 def banner_aspects(banner):
     """이 해석 테마에서 나올 수 있는 형상 전체."""
-    if banner == "web":
-        return [a for a in ASPECTS if a["star"] <= 2] + SPIDER_ASPECTS
-    return list(ASPECTS)
+    if banner == "normal":
+        return list(ASPECTS)
+    base = [a for a in ASPECTS if a["star"] <= 2]
+    return base + (SPIDER_ASPECTS if banner == "web" else [])
+
+
+def banner_rates(banner):
+    """등급별 확률(%) — 이 테마에 없는 등급은 빠지고 나머지가 100%가 되도록 맞춘다."""
+    pool = banner_aspects(banner)
+    base = {1: 69.3, 2: 29.7, 3: 1.0}
+    have = {st: v for st, v in base.items() if any(a["star"] == st for a in pool)}
+    tot = sum(have.values())
+    return {st: v * 100.0 / tot for st, v in have.items()}
 
 
 def banner_pool(banner):
     """(형상, 가중치) 목록. 등급 안에서는 균등하다."""
     pool = banner_aspects(banner)
     out = []
-    for star, total in ((1, 69.3), (2, 29.7), (3, 1.0)):
+    for star, total in banner_rates(banner).items():
         grp = [a for a in pool if a["star"] == star]
         out.extend((a, total / len(grp)) for a in grp)
     return out
@@ -935,3 +955,6 @@ WEB_EFFECTS = [
          desc="스킬을 사용할 때마다 무기 9종 중 하나의 효과가 발동 / 손도끼·스틸레토·바스타드 소드: 없음 / "
               "레이피어·랜스: 속도 감소 1·2 / 망치·채찍: 격파피해 +5·+10 / 검: 피해 +5 / 낫: 피해 ×1.3 후 +10"),
 ]
+THEMES["web"].update(effects=WEB_EFFECTS, cats=WEB_EFFECT_CATS)
+THEMES["wal"].update(effects=[], cats=[])
+MENU_PAGES = ["menu"] + ["menu_" + _k for _k in THEMES]    # 서재 페이지 순서 (← →)
